@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "392901790015",
+    "project_id": "qr-attendances-becdb",
+    "storage_bucket": "qr-attendances-becdb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:392901790015:android:95c376e927a76a0124eb8a",
+        "android_client_info": {
+          "package_name": "com.example.qr_attendance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmKrZW7sFq4Jx8qzgDqJIUICHmK_zgcas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:392901790015:android:666b42d39e28a33424eb8a",
+        "android_client_info": {
+          "package_name": "com.jonah.qr_code"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmKrZW7sFq4Jx8qzgDqJIUICHmK_zgcas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:392901790015:android:dd6199a25d96e8e224eb8a",
+        "android_client_info": {
+          "package_name": "com.jonah.qr_code_new"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmKrZW7sFq4Jx8qzgDqJIUICHmK_zgcas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
