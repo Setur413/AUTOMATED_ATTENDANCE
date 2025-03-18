@@ -1,18 +1,21 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:qr_attendance/screens/splash_screen.dart'; // Ensure correct import
+import 'package:qr_attendance/screens/splash_screen.dart';
 import 'package:qr_attendance/screens/login_screen.dart';
 import 'package:qr_attendance/screens/signup_screen.dart';
 import 'package:qr_attendance/screens/lecturer_dashboard.dart';
+import 'package:qr_attendance/screens/student_dashboard.dart';
+import 'package:qr_attendance/screens/course_registration.dart';
+import 'package:qr_attendance/screens/attendance_history.dart';
+import 'package:qr_attendance/screens/qr_scanning.dart';
 import 'package:qr_attendance/screens/monitoring.dart';
 import 'package:qr_attendance/screens/qr_generation.dart';
 import 'package:qr_attendance/screens/course_details.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(AttendanceApp());
+  runApp(const AttendanceApp());
 }
 
 class AttendanceApp extends StatelessWidget {
@@ -26,15 +29,24 @@ class AttendanceApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      initialRoute: '/splash', // Define initial screen
+      initialRoute: '/splash', // Define the initial screen
       routes: {
-        '/splash': (context) => SplashScreen(), // Splash screen loads first
+        // Common Routes
+        '/splash': (context) => SplashScreen(),
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignUpScreen(),
-        '/dashboard': (context) => LecturerDashboard(),
+
+        // Lecturer Routes
+        '/lecturer_dashboard': (context) => LecturerDashboard(),
         '/monitoring': (context) => AttendanceMonitoringScreen(),
-        '/qr_generation': (context) =>  QRCodeGenerationScreen(),
+        '/qr_generation': (context) => QRCodeGenerationScreen(),
         '/course': (context) => CourseManagementScreen(),
+
+        // Student Routes
+        '/dashboard': (context) =>  StudentDashboard(),
+        '/courses': (context) =>  CourseRegistrationScreen(),
+        '/history': (context) =>  AttendanceHistoryScreen(),
+        '/qr_scanning': (context) =>  QRScannerScreen(),
       },
     );
   }

@@ -37,6 +37,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   qr_flutter: ^4.1.0
   cloud_firestore: ^5.6.5
+  table_calendar: ^3.0.9
+  mobile_scanner: ^3.4.1
 
 
 dev_dependencies:
