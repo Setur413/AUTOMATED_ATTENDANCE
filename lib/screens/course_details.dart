@@ -10,152 +10,97 @@ class CourseManagementScreen extends StatefulWidget {
 }
 
 class CourseManagementScreenState extends State<CourseManagementScreen> {
-  TextEditingController courseCodeController = TextEditingController(text: "IT01");
-  TextEditingController courseTitleController = TextEditingController(text: "Introduction to Information Technology");
-  TextEditingController instructorNameController = TextEditingController(text: "Dr. Smith");
-
-  List<String> students = [];
+  TextEditingController courseCodeController = TextEditingController();
+  TextEditingController courseTitleController = TextEditingController();
+  TextEditingController instructorNameController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadCourseDetails();
-  }
-
-  // Load Course from Firestore
-  void _loadCourseDetails() async {
-    try {
-      DocumentSnapshot doc = await FirebaseFirestore.instance.collection('courses').doc(courseCodeController.text).get();
-      if (!mounted) return;
-      if (doc.exists) {
-        setState(() {
-          courseTitleController.text = doc['courseTitle'];
-          instructorNameController.text = doc['instructorName'];
-          students = List<String>.from(doc['students']);
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Course not found!")));
-      }
-    } catch (e) {
-      print("Error loading course: $e");
-    }
   }
 
   // Save or Update Course
   void _saveCourseDetails() async {
+    if (courseCodeController.text.isEmpty ||
+        courseTitleController.text.isEmpty ||
+        instructorNameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("All fields are required!")),
+      );
+      return;
+    }
+
     await FirebaseFirestore.instance.collection('courses').doc(courseCodeController.text).set({
       'courseCode': courseCodeController.text,
       'courseTitle': courseTitleController.text,
       'instructorName': instructorNameController.text,
-      'students': students,
     }, SetOptions(merge: true)); // Prevents overwriting existing data
-    if (!mounted) return;
+
+    setState(() {
+      courseCodeController.clear();
+      courseTitleController.clear();
+      instructorNameController.clear();
+    });
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Course details saved successfully!")),
     );
   }
 
   // Delete Course
-  void _deleteCourse() async {
-    await FirebaseFirestore.instance.collection('courses').doc(courseCodeController.text).delete();
-    setState(() {
-      courseTitleController.clear();
-      instructorNameController.clear();
-      students.clear();
-    });
-    if (!mounted) return;
+  void _deleteCourse(String courseId) async {
+    await FirebaseFirestore.instance.collection('courses').doc(courseId).delete();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Course deleted successfully!")));
   }
 
-  // Add a Student
-  void _addStudent() async {
-    TextEditingController studentNameController = TextEditingController();
+  // Edit Course Details
+  void _editCourse(DocumentSnapshot doc) {
+    TextEditingController editTitleController = TextEditingController(text: doc['courseTitle']);
+    TextEditingController editInstructorController = TextEditingController(text: doc['instructorName']);
 
-    await showDialog(
+    showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Add Student"),
-        content: TextField(
-          controller: studentNameController,
-          decoration: InputDecoration(labelText: "Student Name"),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancel"),
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Edit Course"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: editTitleController, decoration: InputDecoration(labelText: "Course Title")),
+              SizedBox(height: 10),
+              TextField(controller: editInstructorController, decoration: InputDecoration(labelText: "Instructor Name")),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              if (studentNameController.text.isNotEmpty) {
-                setState(() {
-                  students.add(studentNameController.text);
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
+            ElevatedButton(
+              onPressed: () async {
+                await FirebaseFirestore.instance.collection('courses').doc(doc.id).update({
+                  'courseTitle': editTitleController.text,
+                  'instructorName': editInstructorController.text,
                 });
-                _saveCourseDetails();
-              }
-              Navigator.pop(context);
-            },
-            child: Text("Add"),
-          ),
-        ],
-      ),
+                Navigator.pop(context);
+              },
+              child: Text("Save"),
+            ),
+          ],
+        );
+      },
     );
-  }
-
-  // Edit Student
-  void _editStudent(int index) async {
-    TextEditingController studentNameController = TextEditingController(text: students[index]);
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Edit Student"),
-        content: TextField(
-          controller: studentNameController,
-          decoration: InputDecoration(labelText: "Student Name"),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (studentNameController.text.isNotEmpty) {
-                setState(() {
-                  students[index] = studentNameController.text;
-                });
-                _saveCourseDetails();
-              }
-              Navigator.pop(context);
-            },
-            child: Text("Save"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Remove Student
-  void _removeStudent(int index) {
-    setState(() {
-      students.removeAt(index);
-    });
-    _saveCourseDetails();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Course Details"),
-        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.bar_chart))],
+        title: Text("Course Management"),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Course Information", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text("Enter Course Information", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
             TextField(controller: courseCodeController, decoration: InputDecoration(labelText: "Course Code*", filled: true)),
             SizedBox(height: 10),
@@ -165,42 +110,50 @@ class CourseManagementScreenState extends State<CourseManagementScreen> {
             SizedBox(height: 20),
             Row(
               children: [
-                ElevatedButton(onPressed: _saveCourseDetails, child: Text("Save Changes")),
+                ElevatedButton(onPressed: _saveCourseDetails, child: Text("Save Course")),
                 SizedBox(width: 10),
                 OutlinedButton(onPressed: () {}, child: Text("Cancel")),
               ],
             ),
             SizedBox(height: 20),
-            Text("Enrolled Students (${students.length})", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            ElevatedButton(onPressed: _addStudent, child: Text("Add Student")),
-            SizedBox(height: 10),
+            Divider(),
+            Text("Courses Created", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Expanded(
-              child: students.isEmpty
-                  ? Center(child: Text("No students enrolled yet"))
-                  : ListView.builder(
-                      itemCount: students.length,
-                      itemBuilder: (context, index) {
-                        return Card(
-                          child: ListTile(
-                            title: Text(students[index]),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(onPressed: () => _editStudent(index), icon: Icon(Icons.edit)),
-                                IconButton(onPressed: () => _removeStudent(index), icon: Icon(Icons.delete, color: Colors.red)),
-                              ],
-                            ),
+              child: StreamBuilder(
+                stream: FirebaseFirestore.instance.collection('courses').snapshots(),
+                builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return Center(child: Text("No courses available"));
+                  }
+                  return ListView(
+                    children: snapshot.data!.docs.map((doc) {
+                      return Card(
+                        margin: EdgeInsets.symmetric(vertical: 8),
+                        child: ListTile(
+                          title: Text(doc['courseTitle']),
+                          subtitle: Text("Instructor: ${doc['instructorName']}"),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'edit') {
+                                _editCourse(doc);
+                              } else if (value == 'delete') {
+                                _deleteCourse(doc.id);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              PopupMenuItem(value: 'delete', child: Text('Delete')),
+                            ],
                           ),
-                        );
-                      },
-                    ),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _deleteCourse,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: Text("Delete Course", style: TextStyle(color: Colors.white)),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
             ),
           ],
         ),

@@ -17,7 +17,7 @@ class BottomNavBar extends StatelessWidget {
         // Handle navigation based on index
         switch (index) {
           case 0:
-            Navigator.pushNamed(context, '/dashboard');
+            Navigator.pushNamed(context, '/lecturer_dashboard');
             break;
           case 1:
             Navigator.pushNamed(context, '/course');

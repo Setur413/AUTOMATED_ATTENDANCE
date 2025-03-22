@@ -1,7 +1,13 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'bottom.dart'; // Import your BottomNavBar widget
+import 'package:flutter/rendering.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:gallery_saver/gallery_saver.dart';
+import 'bottom.dart';
 
 class QRCodeGenerationScreen extends StatefulWidget {
   const QRCodeGenerationScreen({super.key});
@@ -12,11 +18,14 @@ class QRCodeGenerationScreen extends StatefulWidget {
 
 class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
   int expiryTime = 10;
-  TextEditingController sessionTitleController = TextEditingController();
+  String? selectedCourseCode;
   TextEditingController sessionDescriptionController = TextEditingController();
   TimeOfDay? selectedTime;
   String? qrData;
-  bool isLoading = false; // Track loading state
+  bool isLoading = false;
+
+  // Global Key for capturing QR image
+  GlobalKey globalKey = GlobalKey();
 
   void _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
@@ -31,13 +40,12 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
   }
 
   void _generateQRCode() async {
-    String title = sessionTitleController.text.trim();
     String description = sessionDescriptionController.text.trim();
     String time = selectedTime != null ? selectedTime!.format(context) : "No Time Selected";
 
-    if (title.isEmpty || description.isEmpty || selectedTime == null) {
+    if (selectedCourseCode == null || description.isEmpty || selectedTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please enter all session details.")),
+        SnackBar(content: Text("Please select a course and enter all session details.")),
       );
       return;
     }
@@ -48,7 +56,7 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
 
     try {
       DocumentReference docRef = await FirebaseFirestore.instance.collection('sessions').add({
-        'title': title,
+        'courseCode': selectedCourseCode,
         'description': description,
         'time': time,
         'expiryTime': expiryTime,
@@ -56,7 +64,7 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
       });
 
       setState(() {
-        qrData = "Session ID: ${docRef.id}\nTitle: $title\nTime: $time\nExpiry: $expiryTime min";
+        qrData = "Session ID: ${docRef.id}\nCourse Code: $selectedCourseCode\nTime: $time\nExpiry: $expiryTime min";
         isLoading = false;
       });
     } catch (e) {
@@ -65,6 +73,33 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error generating QR code. Try again.")),
+      );
+    }
+  }
+
+  // Function to capture and save QR code as image
+  Future<void> _saveQRCode() async {
+    try {
+      RenderRepaintBoundary boundary =
+          globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      ui.Image image = await boundary.toImage();
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/qr_code.png';
+      final File imgFile = File(filePath);
+      await imgFile.writeAsBytes(pngBytes);
+
+      // Save to Gallery
+      await GallerySaver.saveImage(imgFile.path, albumName: "QR Codes");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("QR Code saved to Gallery!")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error saving QR Code!")),
       );
     }
   }
@@ -83,16 +118,39 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
             Center(
               child: qrData == null
                   ? Image.asset('assets/download.png', height: 150)
-                  : QrImageView(
-                      data: qrData!,
-                      version: QrVersions.auto,
-                      size: 200.0,
+                  : RepaintBoundary(
+                      key: globalKey,
+                      child: QrImageView(
+                        data: qrData!,
+                        version: QrVersions.auto,
+                        size: 200.0,
+                      ),
                     ),
             ),
             SizedBox(height: 20),
-            TextField(
-              controller: sessionTitleController,
-              decoration: InputDecoration(labelText: "Session Title"),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('courses').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                var courseDocs = snapshot.data!.docs;
+                return DropdownButton<String>(
+                  value: selectedCourseCode,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedCourseCode = newValue;
+                    });
+                  },
+                  items: courseDocs.map<DropdownMenuItem<String>>((doc) {
+                    return DropdownMenuItem<String>(
+                      value: doc['courseCode'],
+                      child: Text(doc['courseCode']),
+                    );
+                  }).toList(),
+                  hint: Text("Select Course Code"),
+                );
+              },
             ),
             TextField(
               controller: sessionDescriptionController,
@@ -127,6 +185,16 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
                 child: isLoading ? CircularProgressIndicator() : Text("Generate QR Code"),
               ),
             ),
+            SizedBox(height: 10),
+            if (qrData != null) // Show download button only when QR is generated
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: _saveQRCode,
+                  icon: Icon(Icons.download),
+                  label: Text("Download QR Code"),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                ),
+              ),
           ],
         ),
       ),

@@ -43,7 +43,7 @@ class AttendanceApp extends StatelessWidget {
         '/course': (context) => CourseManagementScreen(),
 
         // Student Routes
-        '/dashboard': (context) =>  StudentDashboard(),
+        '/student_dashboard': (context) =>  StudentDashboard(),
         '/courses': (context) =>  CourseRegistrationScreen(),
         '/history': (context) =>  AttendanceHistoryScreen(),
         '/qr_scanning': (context) =>  QRScannerScreen(),

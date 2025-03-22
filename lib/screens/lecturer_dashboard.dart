@@ -11,69 +11,82 @@ class LecturerDashboard extends StatefulWidget {
 
 class _LecturerDashboardState extends State<LecturerDashboard> {
   int _currentIndex = 0;
-  final CollectionReference _classesCollection = FirebaseFirestore.instance.collection('scheduled_classes');
+  final CollectionReference _classesCollection =
+      FirebaseFirestore.instance.collection('scheduled_classes');
 
   void _addUpcomingClass() async {
-    final contextRef = context; // Capture context before async calls
-    TextEditingController courseTitleController = TextEditingController();
-    DateTime? selectedDate;
-    TimeOfDay? selectedTime;
+    final contextRef = context;
+    String? selectedCourseCode;
+    DateTime? selectedDateTime;
+
+    // Fetch course codes from Firestore
+    List<String> courseCodes = [];
+    QuerySnapshot courseSnapshot = await FirebaseFirestore.instance.collection('courses').get();
+    for (var doc in courseSnapshot.docs) {
+      courseCodes.add(doc['courseCode']);
+    }
 
     bool? result = await showDialog<bool>(
       context: contextRef,
       builder: (dialogContext) => AlertDialog(
-        title: Text("Add Upcoming Class"),
+        title: const Text("Add Upcoming Class"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: courseTitleController,
-              decoration: InputDecoration(labelText: "Course Title"),
+            DropdownButtonFormField<String>(
+              value: selectedCourseCode,
+              items: courseCodes.map((code) {
+                return DropdownMenuItem(value: code, child: Text(code));
+              }).toList(),
+              onChanged: (value) {
+                selectedCourseCode = value;
+              },
+              decoration: InputDecoration(labelText: "Select Course Code"),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () async {
-                selectedDate = await showDatePicker(
+                DateTime? date = await showDatePicker(
                   context: dialogContext,
                   initialDate: DateTime.now(),
                   firstDate: DateTime.now(),
                   lastDate: DateTime(2100),
                 );
-                if (selectedDate != null) {
-                  selectedTime = await showTimePicker(
+                if (date != null) {
+                  TimeOfDay? time = await showTimePicker(
                     context: dialogContext,
                     initialTime: TimeOfDay.now(),
                   );
+                  if (time != null) {
+                    selectedDateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                  }
                 }
               },
-              child: Text("Select Date & Time"),
+              child: const Text("Select Date & Time"),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext, false);
-            },
-            child: Text("Cancel"),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text("Cancel"),
           ),
           TextButton(
             onPressed: () {
-              if (courseTitleController.text.isNotEmpty && selectedDate != null && selectedTime != null) {
+              if (selectedCourseCode != null && selectedDateTime != null) {
                 Navigator.pop(dialogContext, true);
               }
             },
-            child: Text("Add"),
+            child: const Text("Add"),
           ),
         ],
       ),
     );
 
-    if (result == true && selectedDate != null && selectedTime != null) {
+    if (result == true && selectedDateTime != null && selectedCourseCode != null) {
       await _classesCollection.add({
-        'courseTitle': courseTitleController.text,
-        'date': "${selectedDate!.month}/${selectedDate!.day}",
-        'time': selectedTime!.format(contextRef),
+        'courseCode': selectedCourseCode,
+        'dateTime': Timestamp.fromDate(selectedDateTime!),
       });
     }
   }
@@ -102,7 +115,7 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
             SizedBox(height: 10),
             Expanded(
               child: StreamBuilder(
-                stream: _classesCollection.snapshots(),
+                stream: _classesCollection.where('dateTime', isGreaterThan: Timestamp.now()).snapshots(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
@@ -112,7 +125,9 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
                   }
                   return ListView(
                     children: snapshot.data!.docs.map((doc) {
-                      return _buildClassItem(doc["courseTitle"], doc["date"], doc["time"]);
+                      Timestamp timestamp = doc["dateTime"];
+                      DateTime classDateTime = timestamp.toDate();
+                      return _buildClassItem(doc.get("courseCode"), classDateTime);
                     }).toList(),
                   );
                 },
@@ -173,11 +188,11 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
     );
   }
 
-  Widget _buildClassItem(String title, String date, String time) {
+  Widget _buildClassItem(String code, DateTime dateTime) {
     return Card(
       child: ListTile(
-        title: Text(title),
-        subtitle: Text("$date at $time"),
+        title: Text(code),
+        subtitle: Text("${dateTime.month}/${dateTime.day} at ${dateTime.hour}:${dateTime.minute}"),
       ),
     );
   }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:qr_attendance/screens/navigation.dart'; // Import bottom navigation
 
 class AttendanceHistoryScreen extends StatefulWidget {
+  const AttendanceHistoryScreen({super.key});
+
   @override
   _AttendanceHistoryScreenState createState() => _AttendanceHistoryScreenState();
 }

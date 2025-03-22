@@ -1,14 +1,53 @@
 import 'package:flutter/material.dart';
-import 'package:qr_attendance/screens/class_calendar.dart'; // Import the calendar widget
-import 'package:qr_attendance/screens/navigation.dart'; // Import the navigation bar
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:qr_attendance/screens/class_calendar.dart';
+import 'package:qr_attendance/screens/navigation.dart';
 
 class StudentDashboard extends StatefulWidget {
+  const StudentDashboard({super.key});
+
   @override
   _StudentDashboardState createState() => _StudentDashboardState();
 }
 
 class _StudentDashboardState extends State<StudentDashboard> {
-  int _currentIndex = 0; // Track the selected tab
+  int _currentIndex = 0;
+  List<Map<String, dynamic>> _upcomingClasses = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUpcomingClasses();
+  }
+
+  Future<void> _fetchUpcomingClasses() async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('scheduled_classes')
+          .where('dateTime', isGreaterThan: Timestamp.now())
+          .orderBy('dateTime')
+          .get();
+
+      List<Map<String, dynamic>> classes = snapshot.docs.map((doc) {
+        return {
+          'courseCode': doc['courseCode'],
+          'dateTime': (doc['dateTime'] as Timestamp).toDate(),
+        };
+      }).toList();
+
+      setState(() {
+        _upcomingClasses = classes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load upcoming classes';
+        _isLoading = false;
+      });
+    }
+  }
 
   void _onTabTapped(int index) {
     setState(() {
@@ -57,7 +96,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            ClassCalendar(), // Reusable calendar widget
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _errorMessage.isNotEmpty
+                    ? Center(child: Text(_errorMessage, style: TextStyle(color: Colors.red)))
+                    : ClassCalendar(upcomingClasses: _upcomingClasses),
             const SizedBox(height: 20),
             Card(
               shape: RoundedRectangleBorder(

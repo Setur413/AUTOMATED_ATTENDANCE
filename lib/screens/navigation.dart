@@ -15,7 +15,7 @@ class BottomNavBar extends StatelessWidget {
           onTap(index);
           switch (index) {
             case 0:
-              Navigator.pushReplacementNamed(context, '/dashboard');
+              Navigator.pushReplacementNamed(context, '/student_dashboard');
               break;
             case 1:
               Navigator.pushReplacementNamed(context, '/courses');
