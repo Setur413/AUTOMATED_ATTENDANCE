@@ -4,7 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 class ClassCalendar extends StatefulWidget {
   final List<Map<String, dynamic>> upcomingClasses;
 
-  const ClassCalendar({Key? key, required this.upcomingClasses}) : super(key: key);
+  const ClassCalendar({super.key, required this.upcomingClasses});
 
   @override
   _ClassCalendarState createState() => _ClassCalendarState();

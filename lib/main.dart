@@ -1,8 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_attendance/screens/splash_screen.dart';
-import 'package:qr_attendance/screens/login_screen.dart';
-import 'package:qr_attendance/screens/signup_screen.dart';
 import 'package:qr_attendance/screens/lecturer_dashboard.dart';
 import 'package:qr_attendance/screens/student_dashboard.dart';
 import 'package:qr_attendance/screens/course_registration.dart';
@@ -11,6 +9,7 @@ import 'package:qr_attendance/screens/qr_scanning.dart';
 import 'package:qr_attendance/screens/monitoring.dart';
 import 'package:qr_attendance/screens/qr_generation.dart';
 import 'package:qr_attendance/screens/course_details.dart';
+import 'package:qr_attendance/screens/role_based.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,9 +32,8 @@ class AttendanceApp extends StatelessWidget {
       routes: {
         // Common Routes
         '/splash': (context) => SplashScreen(),
-        '/login': (context) => LoginScreen(),
-        '/signup': (context) => SignUpScreen(),
-
+        '/role': (context) => RoleSelectionScreen(),
+        
         // Lecturer Routes
         '/lecturer_dashboard': (context) => LecturerDashboard(),
         '/monitoring': (context) => AttendanceMonitoringScreen(),

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:qr_attendance/screens/login_screen.dart'; 
+import 'package:qr_attendance/screens/role_based.dart'; 
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,7 +15,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     Timer(Duration(seconds: 3), () {
       // Use named route navigation instead of MaterialPageRoute
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacementNamed(context, '/');
     });
   }
 
@@ -51,7 +51,7 @@ class _SplashScreenState extends State<SplashScreen> {
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                  MaterialPageRoute(builder: (context) => RoleSelectionScreen()),
                 );
               },
               child: Text("Proceed to Login or Sign Up"),
