@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_attendance/screens/class_calendar.dart';
 import 'package:qr_attendance/screens/navigation.dart';
+import 'package:qr_attendance/screens/student_profile.dart'; // Import profile screen
 
 class StudentDashboard extends StatefulWidget {
-  const StudentDashboard({super.key});
+  final Map<String, dynamic> userData; // Accepts user data for profile screen
+
+  const StudentDashboard({super.key, required this.userData});
 
   @override
   _StudentDashboardState createState() => _StudentDashboardState();
@@ -57,18 +60,30 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    // Retrieve student's full name and registration number
+    String fullName = widget.userData['fullName'] ?? 'Student';
+    String regNumber = widget.userData['registrationNumber'] ?? 'N/A';
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text("Profile", style: TextStyle(color: Colors.black)),
+        title: const Text("Dashboard", style: TextStyle(color: Colors.black)),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications, color: Colors.black),
             onPressed: () {},
           ),
-          const CircleAvatar(
-            backgroundImage: NetworkImage("https://via.placeholder.com/150"),
+          IconButton(
+            icon: const Icon(Icons.account_circle, color: Colors.black, size: 30),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => StudentProfileScreen(userData: widget.userData),
+                ),
+              );
+            },
           ),
           const SizedBox(width: 10),
         ],
@@ -78,6 +93,21 @@ class _StudentDashboardState extends State<StudentDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Display welcome message and registration number
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Welcome, $fullName", 
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  "Reg No: $regNumber",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
             const Center(
               child: Text(
                 "Attendify",
@@ -86,7 +116,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ),
             const Center(
               child: Text(
-                "Your attendance app with automatically generated class lists.",
+                "Your attendance app ",
                 textAlign: TextAlign.center,
               ),
             ),

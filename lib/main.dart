@@ -10,6 +10,7 @@ import 'package:qr_attendance/screens/monitoring.dart';
 import 'package:qr_attendance/screens/qr_generation.dart';
 import 'package:qr_attendance/screens/course_details.dart';
 import 'package:qr_attendance/screens/role_based.dart';
+import 'package:qr_attendance/screens/student_profile.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,23 +29,40 @@ class AttendanceApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      initialRoute: '/splash', // Define the initial screen
+      initialRoute: '/splash',
+      
+      // Define static routes
       routes: {
-        // Common Routes
         '/splash': (context) => SplashScreen(),
         '/role': (context) => RoleSelectionScreen(),
-        
-        // Lecturer Routes
+        //lecturer's route
         '/lecturer_dashboard': (context) => LecturerDashboard(),
         '/monitoring': (context) => AttendanceMonitoringScreen(),
         '/qr_generation': (context) => QRCodeGenerationScreen(),
         '/course': (context) => CourseManagementScreen(),
+        //student's route
+        '/courses': (context) => CourseRegistrationScreen(),
+        '/history': (context) => AttendanceHistoryScreen(),
+        '/qr_scanning': (context) => QRScannerScreen(),
+      },
+      
+      // Handle dynamic routes (e.g., passing user data)
+      onGenerateRoute: (settings) {
+        if (settings.name == '/student_dashboard') {
+          final userData = settings.arguments as Map<String, dynamic>?; 
+          return MaterialPageRoute(
+            builder: (context) => StudentDashboard(userData: userData ?? {}),
+          );
+        }
 
-        // Student Routes
-        '/student_dashboard': (context) =>  StudentDashboard(),
-        '/courses': (context) =>  CourseRegistrationScreen(),
-        '/history': (context) =>  AttendanceHistoryScreen(),
-        '/qr_scanning': (context) =>  QRScannerScreen(),
+        if (settings.name == '/profile') {
+          final userData = settings.arguments as Map<String, dynamic>?;
+          return MaterialPageRoute(
+            builder: (context) => StudentProfileScreen(userData: userData ?? {}),
+          );
+        }
+
+        return null; // Default case
       },
     );
   }

@@ -1,5 +1,7 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_attendance/screens/student_dashboard.dart';
 import 'package:qr_attendance/screens/student_signup_screen.dart';
 
@@ -19,7 +21,7 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
   Future<void> _loginStudent() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please enter both email and password.")),
+        const SnackBar(content: Text("Please enter both email and password.")),
       );
       return;
     }
@@ -33,16 +35,29 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
-      
-      if (userCredential.user != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Login successful!")),
-        );
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => StudentDashboard()),
-        );
+      if (userCredential.user != null) {
+        // Fetch user details from Firestore
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('students')
+            .doc(userCredential.user!.uid)
+            .get();
+
+        if (userDoc.exists) {
+          Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+
+          // Navigate to StudentDashboard
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => StudentDashboard(userData: userData),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("User data not found.")),
+          );
+        }
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage = "Login failed. Please try again.";
@@ -57,7 +72,7 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("An unexpected error occurred.")),
+        const SnackBar(content: Text("An unexpected error occurred.")),
       );
     } finally {
       setState(() {
@@ -70,62 +85,62 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
-        padding: EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("Access Account", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 5),
-            Text("Enter your credentials to log in."),
-            SizedBox(height: 20),
+            const Text("Access Account", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 5),
+            const Text("Enter your credentials to log in."),
+            const SizedBox(height: 20),
             TextField(
               controller: emailController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.email_outlined),
                 labelText: "Email Address",
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.lock_outline),
                 labelText: "Password",
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () {},
-                child: Text("Forgot your password?", style: TextStyle(color: Colors.blue)),
+                child: const Text("Forgot your password?", style: TextStyle(color: Colors.blue)),
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             _isLoading
-                ? Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey.shade300,
-                      minimumSize: Size(double.infinity, 50),
+                      minimumSize: const Size(double.infinity, 50),
                     ),
                     onPressed: _loginStudent,
-                    child: Text("Log In as Student"),
+                    child: const Text("Log In as Student"),
                   ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             Center(
               child: TextButton(
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => StudentSignUpScreen()),
+                    MaterialPageRoute(builder: (context) => const StudentSignUpScreen()),
                   );
                 },
-                child: Text("Need an account? Sign Up"),
+                child: const Text("Need an account? Sign Up"),
               ),
             ),
           ],
