@@ -66,7 +66,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen> {
     try {
       await FirebaseFirestore.instance
           .collection('registrations')
-          .doc("$_studentId\_$courseCode")
+          .doc("${_studentId}_$courseCode")
           .set({
         'studentId': _studentId,
         'courseCode': courseCode,

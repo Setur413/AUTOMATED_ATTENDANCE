@@ -18,6 +18,7 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
   String? qrData;
   bool isLoading = false; // Track loading state
 
+  // Function to select the time for the session
   void _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -30,42 +31,54 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
     }
   }
 
+  // Function to generate QR code with session details
   void _generateQRCode() async {
     String title = sessionTitleController.text.trim();
     String description = sessionDescriptionController.text.trim();
-    String time = selectedTime != null ? selectedTime!.format(context) : "No Time Selected";
 
-    if (title.isEmpty || description.isEmpty || selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please enter all session details.")),
-      );
-      return;
-    }
+    // Ensure the current date and selected time are combined into a DateTime
+    if (selectedTime != null) {
+      final now = DateTime.now();
+      final sessionDateTime = DateTime(now.year, now.month, now.day, selectedTime!.hour, selectedTime!.minute);
 
-    setState(() {
-      isLoading = true;
-    });
+      // Format the DateTime into a string for display in QR code
+      String time = "${sessionDateTime.hour}:${sessionDateTime.minute.toString().padLeft(2, '0')}";
 
-    try {
-      DocumentReference docRef = await FirebaseFirestore.instance.collection('sessions').add({
-        'title': title,
-        'description': description,
-        'time': time,
-        'expiryTime': expiryTime,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      // Validate input fields
+      if (title.isEmpty || description.isEmpty || selectedTime == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Please enter all session details.")),
+        );
+        return;
+      }
 
       setState(() {
-        qrData = "Session ID: ${docRef.id}\nTitle: $title\nTime: $time\nExpiry: $expiryTime min";
-        isLoading = false;
+        isLoading = true;
       });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error generating QR code. Try again.")),
-      );
+
+      try {
+        // Store the session with DateTime in Firestore as Timestamp
+        DocumentReference docRef = await FirebaseFirestore.instance.collection('sessions').add({
+          'title': title,
+          'description': description,
+          'time': sessionDateTime, // Store DateTime here
+          'expiryTime': expiryTime,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // Set the QR code data with formatted time
+        setState(() {
+          qrData = "Session ID: ${docRef.id}\nTitle: $title\nTime: $time\nExpiry: $expiryTime min";
+          isLoading = false;
+        });
+      } catch (e) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error generating QR code. Try again.")),
+        );
+      }
     }
   }
 

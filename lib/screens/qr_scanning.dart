@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:qr_attendance/screens/navigation.dart';  // Import the navigation bar
+import 'package:qr_attendance/screens/navigation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -12,29 +14,132 @@ class QRScannerScreen extends StatefulWidget {
 class _QRScannerScreenState extends State<QRScannerScreen> {
   String scanStatus = "Scanning...";
   bool isScanning = true;
-  int _currentIndex = 3; // Set active index for QR Scanner
+  int _currentIndex = 3;
+  String? fullName;
+  String? registrationNumber;
 
-  void _onDetect(BarcodeCapture capture) {
-    if (isScanning && capture.barcodes.isNotEmpty) {
-      setState(() {
-        scanStatus = "QR Code Detected: ${capture.barcodes.first.rawValue}";
-        isScanning = false;
-      });
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserDetails();
+  }
 
-      // Simulate a short delay before navigating
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/dashboard'); // Navigate to Dashboard
+  // Fetch student details from Firestore
+  Future<void> _fetchUserDetails() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final studentDoc = await FirebaseFirestore.instance
+            .collection('students')
+            .doc(user.uid)
+            .get();
+
+        if (studentDoc.exists) {
+          setState(() {
+            fullName = studentDoc['fullName'] ?? "Unknown";
+            registrationNumber = studentDoc['registrationNumber'] ?? "N/A";
+          });
+        } else {
+          setState(() => scanStatus = "Student details not found!");
         }
-      });
+      } catch (e) {
+        setState(() => scanStatus = "Error loading student details.");
+      }
+    } else {
+      setState(() => scanStatus = "No authenticated user.");
     }
+  }
+
+  void _onDetect(BarcodeCapture capture) async {
+    if (isScanning && capture.barcodes.isNotEmpty) {
+      final qrData = capture.barcodes.first.rawValue ?? "";
+      if (qrData.isNotEmpty) {
+        setState(() {
+          scanStatus = "QR Code Detected!";
+          isScanning = false;
+        });
+
+        await _storeAttendance(qrData);
+      } else {
+        setState(() => scanStatus = "Invalid QR Code. Try again.");
+      }
+    }
+  }
+
+  // Function to store attendance in Firestore
+  Future<void> _storeAttendance(String qrData) async {
+    if (fullName == null || registrationNumber == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Student details not loaded. Try again.")),
+      );
+      return;
+    }
+
+    // Extract Session ID and Title from the QR data
+    List<String> dataParts = qrData.split("\n");
+    String sessionId = "";
+    String sessionTitle = "";
+
+    for (String part in dataParts) {
+      if (part.startsWith("Session ID:")) {
+        sessionId = part.replaceFirst("Session ID: ", "").trim();
+      } else if (part.startsWith("Title:")) {
+        sessionTitle = part.replaceFirst("Title: ", "").trim();
+      }
+    }
+
+    if (sessionId.isEmpty || sessionTitle.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Invalid QR Code format.")),
+      );
+      return;
+    }
+
+    // Check if the user has already scanned this session
+    bool alreadyScanned = await _checkIfAlreadyScanned(sessionId, registrationNumber!);
+    if (alreadyScanned) {
+      setState(() => scanStatus = "Attendance already recorded for this session!");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("You have already scanned this session's QR code!")),
+      );
+      return;
+    }
+
+    // Save attendance with "Present" status
+    try {
+      await FirebaseFirestore.instance.collection('session_attendance').add({
+        'sessionId': sessionId,
+        'sessionTitle': sessionTitle,
+        'scannedAt': FieldValue.serverTimestamp(),
+        'fullName': fullName,
+        'registrationNumber': registrationNumber,
+        'status': "Present", // Add status field
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Attendance recorded successfully!")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error storing attendance. Try again.")),
+      );
+    }
+  }
+
+  // Function to check if the student has already scanned for the session
+  Future<bool> _checkIfAlreadyScanned(String sessionId, String registrationNumber) async {
+    QuerySnapshot attendanceQuery = await FirebaseFirestore.instance
+        .collection('session_attendance')
+        .where('sessionId', isEqualTo: sessionId)
+        .where('registrationNumber', isEqualTo: registrationNumber)
+        .get();
+
+    return attendanceQuery.docs.isNotEmpty;
   }
 
   void _onNavTap(int index) {
     if (index != _currentIndex) {
-      setState(() {
-        _currentIndex = index;
-      });
+      setState(() => _currentIndex = index);
       switch (index) {
         case 0:
           Navigator.pushReplacementNamed(context, '/dashboard');
@@ -70,7 +175,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           Icon(Icons.bar_chart, color: Colors.black),
           SizedBox(width: 10),
           CircleAvatar(
-            backgroundColor: Colors.grey, // Placeholder for profile image
+            backgroundColor: Colors.grey,
           ),
           SizedBox(width: 10),
         ],
@@ -92,25 +197,6 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             Text(
               scanStatus,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: isScanning
-                  ? null
-                  : () {
-                      setState(() {
-                        scanStatus = "Scanning...";
-                        isScanning = true;
-                      });
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text("Scan Again"),
             ),
           ],
         ),

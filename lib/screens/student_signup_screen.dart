@@ -25,7 +25,7 @@ class _StudentSignUpScreenState extends State<StudentSignUpScreen> {
         passwordController.text.isEmpty ||
         studentRegNoController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please fill in all fields.")),
+        const SnackBar(content: Text("Please fill in all fields.")),
       );
       return;
     }
@@ -35,6 +35,7 @@ class _StudentSignUpScreenState extends State<StudentSignUpScreen> {
     });
 
     try {
+      // Sign up user with Firebase Authentication
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
@@ -42,6 +43,7 @@ class _StudentSignUpScreenState extends State<StudentSignUpScreen> {
 
       User? user = userCredential.user;
       if (user != null) {
+        // Save user details to Firestore
         await _firestore.collection("students").doc(user.uid).set({
           "fullName": fullNameController.text.trim(),
           "email": emailController.text.trim(),
@@ -49,13 +51,15 @@ class _StudentSignUpScreenState extends State<StudentSignUpScreen> {
           "uid": user.uid,
         });
 
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Sign-up successful! Please log in.")),
+          const SnackBar(content: Text("Sign-up successful! Please log in.")),
         );
-        
+
+        // Navigate to the login screen
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => StudentLoginScreen()),
+          MaterialPageRoute(builder: (context) => const StudentLoginScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -73,7 +77,7 @@ class _StudentSignUpScreenState extends State<StudentSignUpScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("An unexpected error occurred.")),
+        const SnackBar(content: Text("An unexpected error occurred.")),
       );
     } finally {
       setState(() {
@@ -86,79 +90,80 @@ class _StudentSignUpScreenState extends State<StudentSignUpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Sign Up"),
+        title: const Text("Sign Up"),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Padding(
-        padding: EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("Create an Account", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 5),
-            Text("Enter your details to create a student account."),
-            SizedBox(height: 20),
+            const Text("Create an Account", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 5),
+            const Text("Enter your details to create a student account."),
+            const SizedBox(height: 20),
             TextField(
               controller: fullNameController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.person),
                 labelText: "Full Name",
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             TextField(
               controller: emailController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.email_outlined),
                 labelText: "Email Address",
                 border: OutlineInputBorder(),
               ),
+              keyboardType: TextInputType.emailAddress,
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.lock_outline),
                 labelText: "Password",
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             TextField(
               controller: studentRegNoController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.badge),
                 labelText: "Student Registration Number",
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _isLoading
-                ? Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey.shade300,
-                      minimumSize: Size(double.infinity, 50),
+                      minimumSize: const Size(double.infinity, 50),
                     ),
                     onPressed: _signUpStudent,
-                    child: Text("Sign Up as Student"),
+                    child: const Text("Sign Up as Student"),
                   ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             Center(
               child: TextButton(
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => StudentLoginScreen()),
+                    MaterialPageRoute(builder: (context) => const StudentLoginScreen()),
                   );
                 },
-                child: Text("Already have an account? Log In"),
+                child: const Text("Already have an account? Log In"),
               ),
             ),
           ],
