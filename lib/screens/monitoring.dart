@@ -11,13 +11,11 @@ class AttendanceMonitoringScreen extends StatefulWidget {
 
 class _AttendanceMonitoringScreenState extends State<AttendanceMonitoringScreen> {
   String? selectedCourse;
-  String? selectedDate;
 
   List<String> courses = ["Class 101", "Math 201", "CS 305"];
-  List<String> dates = ["2024-03-01", "2024-03-02", "2024-03-03"];
 
   Color _getStatusColor(String status) {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'present':
         return Colors.green;
       case 'absent':
@@ -31,21 +29,20 @@ class _AttendanceMonitoringScreenState extends State<AttendanceMonitoringScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Lecturer Attendance Monitoring"),
+        title: const Text("Lecturer Attendance Monitoring"),
       ),
       body: Padding(
-        padding: EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Select Course", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            // Course Dropdown
+            Text("Select Course", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             DropdownButton<String>(
               value: selectedCourse,
-              hint: Text("Choose a Course"),
+              hint: const Text("Choose a Course"),
               onChanged: (String? newValue) {
-                setState(() {
-                  selectedCourse = newValue;
-                });
+                setState(() => selectedCourse = newValue);
               },
               items: courses.map<DropdownMenuItem<String>>((String course) {
                 return DropdownMenuItem<String>(
@@ -54,64 +51,55 @@ class _AttendanceMonitoringScreenState extends State<AttendanceMonitoringScreen>
                 );
               }).toList(),
             ),
-            SizedBox(height: 10),
-            Text("Select Date", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            DropdownButton<String>(
-              value: selectedDate,
-              hint: Text("Choose a Date"),
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedDate = newValue;
-                });
-              },
-              items: dates.map<DropdownMenuItem<String>>((String date) {
-                return DropdownMenuItem<String>(
-                  value: date,
-                  child: Text(date),
-                );
-              }).toList(),
-            ),
-            SizedBox(height: 20),
-            Text("Attendance List", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
+            const SizedBox(height: 20),
+
+            // Attendance List Header
+            const Text("Attendance List", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+
+            // Attendance Data Stream
             Expanded(
-              child: StreamBuilder(
-                stream: FirebaseFirestore.instance.collection('attendance')
-                    .where('course', isEqualTo: selectedCourse)
-                    .where('date', isEqualTo: selectedDate)
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('session_attendance')
+                    .where('sessionTitle', isEqualTo: selectedCourse)
                     .snapshots(),
-                builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                builder: (context, snapshot) {
                   if (!snapshot.hasData) {
-                    return Center(child: CircularProgressIndicator());
+                    return const Center(child: CircularProgressIndicator());
                   }
 
-                  var students = snapshot.data!.docs;
+                  final attendanceRecords = snapshot.data!.docs;
 
-                  if (students.isEmpty) {
-                    return Center(child: Text("No students found for this course and date."));
+                  if (attendanceRecords.isEmpty) {
+                    return const Center(child: Text("No attendance records found."));
                   }
 
                   return ListView.builder(
-                    itemCount: students.length,
+                    itemCount: attendanceRecords.length,
                     itemBuilder: (context, index) {
-                      var student = students[index];
+                      var record = attendanceRecords[index];
+
                       return Card(
-                        margin: EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 4,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
                         child: Padding(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(12.0),
                           child: ListTile(
                             title: Text(
-                              "${student['name']}",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              record['fullName'],
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
-                            subtitle: Padding(
-                              padding: EdgeInsets.only(top: 8.0),
-                              child: Text(
-                                "ID: ${student['id']}\nCourse: ${student['course']}\nDate: ${student['date']}",
-                                style: TextStyle(fontSize: 16),
-                              ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("📌 Registration Number: ${record['registrationNumber']}"),
+                                Text("📚 Course: ${record['sessionTitle']}"),
+                                Text("📅 Date: ${(record['scannedAt'] as Timestamp).toDate()}"),
+                              ],
                             ),
-                            trailing: Icon(Icons.circle, color: _getStatusColor(student['status']), size: 16),
+                            trailing: Icon(Icons.circle, color: _getStatusColor("present"), size: 16),
                           ),
                         ),
                       );
