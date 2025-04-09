@@ -11,8 +11,30 @@ class AttendanceMonitoringScreen extends StatefulWidget {
 
 class _AttendanceMonitoringScreenState extends State<AttendanceMonitoringScreen> {
   String? selectedCourse;
+  List<String> courses = [];
+  bool isLoading = true;
 
-  List<String> courses = ["Class 101", "Math 201", "CS 305"];
+  // Fetch courses from Firestore
+  Future<void> _fetchCourses() async {
+    try {
+      var courseSnapshot = await FirebaseFirestore.instance.collection('courses').get();
+      List<String> courseList = [];
+      courseSnapshot.docs.forEach((doc) {
+        courseList.add(doc['courseCode']);
+      });
+      setState(() {
+        courses = courseList;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error fetching courses: $e")),
+      );
+    }
+  }
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -23,6 +45,12 @@ class _AttendanceMonitoringScreenState extends State<AttendanceMonitoringScreen>
       default:
         return Colors.grey;
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCourses(); // Fetch courses when the screen is loaded
   }
 
   @override
@@ -38,19 +66,21 @@ class _AttendanceMonitoringScreenState extends State<AttendanceMonitoringScreen>
           children: [
             // Course Dropdown
             Text("Select Course", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            DropdownButton<String>(
-              value: selectedCourse,
-              hint: const Text("Choose a Course"),
-              onChanged: (String? newValue) {
-                setState(() => selectedCourse = newValue);
-              },
-              items: courses.map<DropdownMenuItem<String>>((String course) {
-                return DropdownMenuItem<String>(
-                  value: course,
-                  child: Text(course),
-                );
-              }).toList(),
-            ),
+            isLoading
+                ? const Center(child: CircularProgressIndicator()) // Show loading indicator
+                : DropdownButton<String>(
+                    value: selectedCourse,
+                    hint: const Text("Choose a Course"),
+                    onChanged: (String? newValue) {
+                      setState(() => selectedCourse = newValue);
+                    },
+                    items: courses.map<DropdownMenuItem<String>>((String course) {
+                      return DropdownMenuItem<String>(
+                        value: course,
+                        child: Text(course),
+                      );
+                    }).toList(),
+                  ),
             const SizedBox(height: 20),
 
             // Attendance List Header
@@ -60,20 +90,22 @@ class _AttendanceMonitoringScreenState extends State<AttendanceMonitoringScreen>
             // Attendance Data Stream
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('session_attendance')
-                    .where('sessionTitle', isEqualTo: selectedCourse)
-                    .snapshots(),
+                stream: selectedCourse == null
+                    ? null
+                    : FirebaseFirestore.instance
+                        .collection('session_attendance')
+                        .where('sessionTitle', isEqualTo: selectedCourse)
+                        .snapshots(),
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final attendanceRecords = snapshot.data!.docs;
-
-                  if (attendanceRecords.isEmpty) {
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return const Center(child: Text("No attendance records found."));
                   }
+
+                  final attendanceRecords = snapshot.data!.docs;
 
                   return ListView.builder(
                     itemCount: attendanceRecords.length,

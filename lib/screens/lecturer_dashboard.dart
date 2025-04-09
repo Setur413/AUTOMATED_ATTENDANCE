@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'bottom.dart';
+import 'report_screen.dart'; // Import the AttendanceReportScreen
 
 class LecturerDashboard extends StatefulWidget {
   const LecturerDashboard({super.key});
@@ -107,7 +108,7 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildCalendarCard(),
-                _buildInfoCard("80.8%", "Avg. attendance rate"),
+                _buildNavigationCard(),
               ],
             ),
             SizedBox(height: 20),
@@ -169,19 +170,28 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
     );
   }
 
-  Widget _buildInfoCard(String value, String label) {
+  Widget _buildNavigationCard() {
     return Expanded(
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              SizedBox(height: 5),
-              Text(label, textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
-            ],
+      child: InkWell(
+        onTap: () {
+          // Navigate to the AttendanceReportScreen
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => AttendanceReportScreen()),
+          );
+        },
+        child: Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Icon(Icons.analytics, size: 40, color: Colors.green),
+                SizedBox(height: 5),
+                Text("Attendance Report", textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
+              ],
+            ),
           ),
         ),
       ),

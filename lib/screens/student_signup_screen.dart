@@ -18,6 +18,7 @@ class _StudentSignUpScreenState extends State<StudentSignUpScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isLoading = false;
+  bool _isPasswordVisible = false; // To control password visibility
 
   Future<void> _signUpStudent() async {
     if (fullNameController.text.isEmpty ||
@@ -127,11 +128,22 @@ class _StudentSignUpScreenState extends State<StudentSignUpScreen> {
             const SizedBox(height: 15),
             TextField(
               controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.lock_outline),
+              obscureText: !_isPasswordVisible, // Use the variable to toggle password visibility
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.lock_outline),
                 labelText: "Password",
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible; // Toggle password visibility
+                    });
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 15),

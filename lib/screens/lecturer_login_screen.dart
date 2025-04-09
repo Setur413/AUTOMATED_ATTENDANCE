@@ -15,6 +15,7 @@ class _LecturerLoginScreenState extends State<LecturerLoginScreen> {
   final TextEditingController passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
+  bool _isPasswordVisible = false; // Variable to control password visibility
 
   Future<void> _loginLecturer() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
@@ -69,6 +70,33 @@ class _LecturerLoginScreenState extends State<LecturerLoginScreen> {
     }
   }
 
+  // Function to handle the "Forgot your password?" functionality
+  Future<void> _resetPassword() async {
+    String email = emailController.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter your email address.")),
+      );
+      return;
+    }
+
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Password reset email sent! Check your inbox.")),
+      );
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = "Error resetting password. Please try again.";
+      if (e.code == 'user-not-found') {
+        errorMessage = "No user found for this email.";
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,10 +129,21 @@ class _LecturerLoginScreenState extends State<LecturerLoginScreen> {
             SizedBox(height: 10),
             TextField(
               controller: passwordController,
-              obscureText: true,
+              obscureText: !_isPasswordVisible, // Toggle visibility based on the boolean
               decoration: InputDecoration(
                 labelText: "Password",
                 prefixIcon: Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible; // Toggle password visibility
+                    });
+                  },
+                ),
                 border: OutlineInputBorder(),
               ),
             ),
@@ -112,7 +151,7 @@ class _LecturerLoginScreenState extends State<LecturerLoginScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () {}, // Implement forgot password later
+                onPressed: _resetPassword, // Calls the reset password function
                 child: Text("Forgot your password?", style: TextStyle(color: Colors.blue)),
               ),
             ),

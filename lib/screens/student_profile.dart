@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -14,68 +15,78 @@ class StudentProfileScreen extends StatefulWidget {
 }
 
 class _StudentProfileScreenState extends State<StudentProfileScreen> {
-  File? _profileImage;
   final ImagePicker _picker = ImagePicker();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  String? _profileImageUrl;
 
   @override
   void initState() {
     super.initState();
-    _loadProfileImage(); // Load saved profile image when app starts
+    _profileImageUrl = widget.userData['profileImage'];
   }
 
-  // Pick Image from Gallery and Save Locally
-  Future<void> _pickImage() async {
+  // Pick and upload image to Firebase Storage
+  Future<void> _pickAndUploadImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
+    if (pickedFile == null) return;
+
+    File imageFile = File(pickedFile.path);
+    String userId = _auth.currentUser!.uid;
+
+    try {
+      // Create a reference to Firebase Storage
+      Reference ref = _storage.ref().child('profile_images/$userId.jpg');
+      
+      // Upload image to Firebase Storage
+      await ref.putFile(imageFile);
+      
+      // Get the download URL for the image
+      String imageUrl = await ref.getDownloadURL();
+      
+      // Update the Firestore with the profile image URL
+      await _firestore.collection('students').doc(userId).update({'profileImage': imageUrl});
+
+      // Update the UI with the new image URL
       setState(() {
-        _profileImage = File(pickedFile.path);
+        _profileImageUrl = imageUrl;
       });
-      await _saveProfileImage(pickedFile.path);
+      
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Profile image updated")));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error uploading image: $e")));
     }
   }
 
-  // Save Image Path Locally
-  Future<void> _saveProfileImage(String imagePath) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('profile_image', imagePath);
-  }
-
-  // Load Image from Local Storage
-  Future<void> _loadProfileImage() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? imagePath = prefs.getString('profile_image');
-    if (imagePath != null) {
-      setState(() {
-        _profileImage = File(imagePath);
-      });
-    }
-  }
-
-  // Log Out Function
+  // Log out
   Future<void> _logout(BuildContext context) async {
     await _auth.signOut();
     Navigator.pushNamedAndRemoveUntil(context, '/role', (route) => false);
   }
 
-  // Delete Account Function
+  // Delete Account
   Future<void> _deleteAccount(BuildContext context) async {
     try {
+      String userId = _auth.currentUser!.uid;
+      
+      // Delete profile image from Firebase Storage
+      await _storage.ref().child('profile_images/$userId.jpg').delete();
+      
+      // Delete user data from Firestore
+      await _firestore.collection('students').doc(userId).delete();
+      
+      // Delete the user from Firebase Authentication
       await _auth.currentUser?.delete();
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.remove('profile_image'); // Remove stored image on delete
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Account deleted successfully!")),
-      );
+      
       Navigator.pushNamedAndRemoveUntil(context, '/role', (route) => false);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error deleting account: $e")),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error deleting account: $e")));
     }
   }
 
-  // Show Confirmation Dialog for Deleting Account
+  // Confirm delete account action
   void _showDeleteConfirmation(BuildContext context) {
     showDialog(
       context: context,
@@ -83,10 +94,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         title: const Text("Confirm Deletion"),
         content: const Text("Are you sure you want to delete your account? This action cannot be undone."),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -105,7 +113,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: Colors.red,
-        elevation: 0,
         title: const Text("Profile", style: TextStyle(color: Colors.white)),
         centerTitle: true,
       ),
@@ -128,15 +135,13 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 children: [
                   const SizedBox(height: 30),
                   GestureDetector(
-                    onTap: _pickImage,
+                    onTap: _pickAndUploadImage,
                     child: CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.white,
-                      backgroundImage: _profileImage != null
-                          ? FileImage(_profileImage!) as ImageProvider
-                          : widget.userData['profileImage'] != null
-                              ? NetworkImage(widget.userData['profileImage'])
-                              : const AssetImage("assets/profile_placeholder.png"),
+                      backgroundImage: _profileImageUrl != null
+                          ? NetworkImage(_profileImageUrl!)
+                          : const AssetImage("assets/profile_placeholder.png") as ImageProvider,
                       child: Align(
                         alignment: Alignment.bottomRight,
                         child: CircleAvatar(

@@ -20,6 +20,7 @@ class _LecturerSignUpScreenState extends State<LecturerSignUpScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
+  bool _isPasswordVisible = false; // Variable to control password visibility
 
   Future<void> _signUpLecturer() async {
     if (fullNameController.text.isEmpty ||
@@ -143,10 +144,21 @@ class _LecturerSignUpScreenState extends State<LecturerSignUpScreen> {
             SizedBox(height: 10),
             TextField(
               controller: passwordController,
-              obscureText: true,
+              obscureText: !_isPasswordVisible, // Toggle visibility based on the boolean
               decoration: InputDecoration(
                 labelText: "Password",
                 border: OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible; // Toggle password visibility
+                    });
+                  },
+                ),
               ),
             ),
             SizedBox(height: 10),

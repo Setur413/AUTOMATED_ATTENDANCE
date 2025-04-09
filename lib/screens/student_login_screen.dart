@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -17,6 +16,7 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
   final TextEditingController passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
+  bool _isPasswordVisible = false; // To control password visibility
 
   Future<void> _loginStudent() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
@@ -81,6 +81,33 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
     }
   }
 
+  // Function to handle "Forgot your password?" functionality
+  Future<void> _resetPassword() async {
+    String email = emailController.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter your email address.")),
+      );
+      return;
+    }
+
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Password reset email sent! Check your inbox.")),
+      );
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = "Error resetting password. Please try again.";
+      if (e.code == 'user-not-found') {
+        errorMessage = "No user found for this email.";
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,18 +132,29 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
             const SizedBox(height: 15),
             TextField(
               controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.lock_outline),
+              obscureText: !_isPasswordVisible, // Use the variable to toggle password visibility
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.lock_outline),
                 labelText: "Password",
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible; // Toggle password visibility
+                    });
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () {},
+                onPressed: _resetPassword, // Calls the reset password function
                 child: const Text("Forgot your password?", style: TextStyle(color: Colors.blue)),
               ),
             ),
