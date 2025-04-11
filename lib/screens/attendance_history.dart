@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:qr_attendance/screens/navigation.dart'; // Import bottom navigation
+import 'package:intl/intl.dart';
+import 'package:qr_attendance/screens/navigation.dart';
 
 class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({super.key});
@@ -9,31 +12,32 @@ class AttendanceHistoryScreen extends StatefulWidget {
 }
 
 class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
-  int _currentIndex = 2; // Set default tab to "History"
+  int _currentIndex = 2;
+  String? fullName;
 
-  void _onTabTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _fetchStudentFullName();
   }
 
-  final List<Map<String, String>> attendanceRecords = [
-    {
-      "class": "Math Class",
-      "date": "Sep 25, 2023",
-      "percentage": "85%",
-    },
-    {
-      "class": "Science Class",
-      "date": "Sep 26, 2023",
-      "percentage": "90%",
-    },
-    {
-      "class": "History Class",
-      "date": "Sep 27, 2023",
-      "percentage": "88%",
-    },
-  ];
+  Future<void> _fetchStudentFullName() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final doc = await FirebaseFirestore.instance.collection('students').doc(uid).get();
+      if (doc.exists) {
+        setState(() {
+          fullName = doc['fullName'];
+        });
+      }
+    }
+  }
+
+  String formatDate(Timestamp? timestamp) {
+    if (timestamp == null) return 'Unknown Date';
+    final date = timestamp.toDate();
+    return DateFormat('MMM d, yyyy – hh:mm a').format(date);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,62 +46,77 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          "History",
+          "Attendance History",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: const [
-          Icon(Icons.bar_chart, color: Colors.black), // Analytics (future)
-          SizedBox(width: 10),
-          CircleAvatar(
-            backgroundImage: NetworkImage("https://via.placeholder.com/150"),
-          ),
-          SizedBox(width: 10),
-        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView.builder(
-          itemCount: attendanceRecords.length,
-          itemBuilder: (context, index) {
-            final record = attendanceRecords[index];
-            return Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15.0),
-              ),
-              elevation: 4,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(12),
-                title: Text(
-                  record["class"]!,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Date: ${record["date"]}"),
-                    Text("Percentage: ${record["percentage"]}"),
-                    const SizedBox(height: 5),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Handle file upload for absence justification
-                      },
-                      child: const Text("Justify Absence"),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
+      body: fullName == null
+          ? const Center(child: CircularProgressIndicator())
+          : StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('session_attendance')
+                  .where('fullName', isEqualTo: fullName)
+                  .orderBy('scannedAt', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text("No attendance history found."));
+                }
+
+                final records = snapshot.data!.docs;
+
+                return ListView.builder(
+                  itemCount: records.length,
+                  itemBuilder: (context, index) {
+                    final data = records[index].data() as Map<String, dynamic>;
+
+                    // Debugging prints
+                    print('Attendance Record: $data');
+
+                    final sessionTitle = data['sessionTitle'] ?? 'No Title';
+                    final regNumber = data['registrationNumber'] ?? 'N/A';
+                    final scannedAt = data['scannedAt'] as Timestamp?;
+
+                    return Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15.0),
+                      ),
+                      elevation: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(12),
+                        title: Text(
+                          sessionTitle,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Reg. Number: $regNumber"),
+                            Text("Date: ${formatDate(scannedAt)}"),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
-        onTap: _onTabTapped,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
       ),
     );
   }

@@ -19,9 +19,9 @@ class _AttendanceMonitoringScreenState extends State<AttendanceMonitoringScreen>
     try {
       var courseSnapshot = await FirebaseFirestore.instance.collection('courses').get();
       List<String> courseList = [];
-      courseSnapshot.docs.forEach((doc) {
+      for (var doc in courseSnapshot.docs) {
         courseList.add(doc['courseCode']);
-      });
+      }
       setState(() {
         courses = courseList;
         isLoading = false;

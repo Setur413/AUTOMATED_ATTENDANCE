@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:qr_attendance/screens/navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'attendance_success_screen.dart'; // Import the new screen
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -119,6 +119,12 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Attendance recorded successfully!")),
       );
+
+      // Navigate to the success screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AttendanceSuccessScreen()),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error storing attendance. Try again.")),
@@ -137,6 +143,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     return attendanceQuery.docs.isNotEmpty;
   }
 
+  // Navigation when tapping on bottom navigation bar
   void _onNavTap(int index) {
     if (index != _currentIndex) {
       setState(() => _currentIndex = index);
@@ -201,9 +208,27 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavBar(
+      bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list),
+            label: 'Courses',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history),
+            label: 'History',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.qr_code),
+            label: 'QR Scan',
+          ),
+        ],
       ),
     );
   }

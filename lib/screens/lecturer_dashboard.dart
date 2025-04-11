@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'bottom.dart';
-import 'report_screen.dart'; // Import the AttendanceReportScreen
+import 'profile_screen.dart'; // Import ProfileScreen
 
 class LecturerDashboard extends StatefulWidget {
   const LecturerDashboard({super.key});
@@ -14,6 +14,37 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
   int _currentIndex = 0;
   final CollectionReference _classesCollection =
       FirebaseFirestore.instance.collection('scheduled_classes');
+  String? userName;
+  String? userEmail;
+  String? profileImage;
+
+  // Fetch user profile details from Firestore (assuming a "lecturers" collection)
+  Future<void> _fetchUserProfile() async {
+    try {
+      var userSnapshot = await FirebaseFirestore.instance.collection('lecturers').doc('user_id_here').get(); // Replace with actual user ID
+      if (userSnapshot.exists) {
+        setState(() {
+          userName = userSnapshot['name'];
+          userEmail = userSnapshot['email'];
+          profileImage = userSnapshot['profileImage']; // Assuming profileImage field exists
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("User profile not found")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error fetching profile: $e")),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserProfile(); // Fetch user profile on screen load
+  }
 
   void _addUpcomingClass() async {
     final contextRef = context;
@@ -108,7 +139,7 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildCalendarCard(),
-                _buildNavigationCard(),
+                _buildProfileCard(),
               ],
             ),
             SizedBox(height: 20),
@@ -170,14 +201,22 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
     );
   }
 
-  Widget _buildNavigationCard() {
+  Widget _buildProfileCard() {
     return Expanded(
       child: InkWell(
         onTap: () {
-          // Navigate to the AttendanceReportScreen
+          // Navigate to the Profile Screen and pass userData
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => AttendanceReportScreen()),
+            MaterialPageRoute(
+              builder: (context) => LecturerProfileScreen(
+                userData: {
+                  'name': userName ?? 'Name not available',
+                  'email': userEmail ?? 'Email not available',
+                  'profileImage': profileImage ?? '', // Pass the profile image URL or placeholder
+                },
+              ),
+            ),
           );
         },
         child: Card(
@@ -187,9 +226,9 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
             padding: EdgeInsets.all(16),
             child: Column(
               children: [
-                Icon(Icons.analytics, size: 40, color: Colors.green),
+                Icon(Icons.account_circle, size: 40, color: Colors.blue),
                 SizedBox(height: 5),
-                Text("Attendance Report", textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
+                Text("Profile", textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
               ],
             ),
           ),
