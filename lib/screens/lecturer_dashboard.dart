@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // For date formatting
 import 'bottom.dart';
-import 'profile_screen.dart'; // Import ProfileScreen
+import 'profile_screen.dart';
+import 'reportscreen.dart';
+
 
 class LecturerDashboard extends StatefulWidget {
   const LecturerDashboard({super.key});
@@ -18,15 +21,17 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
   String? userEmail;
   String? profileImage;
 
-  // Fetch user profile details from Firestore (assuming a "lecturers" collection)
   Future<void> _fetchUserProfile() async {
     try {
-      var userSnapshot = await FirebaseFirestore.instance.collection('lecturers').doc('user_id_here').get(); // Replace with actual user ID
+      var userSnapshot = await FirebaseFirestore.instance
+          .collection('lecturers')
+          .doc('user_id_here') // Replace with actual user ID
+          .get();
       if (userSnapshot.exists) {
         setState(() {
           userName = userSnapshot['name'];
           userEmail = userSnapshot['email'];
-          profileImage = userSnapshot['profileImage']; // Assuming profileImage field exists
+          profileImage = userSnapshot['profileImage'];
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -43,7 +48,7 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
   @override
   void initState() {
     super.initState();
-    _fetchUserProfile(); // Fetch user profile on screen load
+    _fetchUserProfile();
   }
 
   void _addUpcomingClass() async {
@@ -51,9 +56,9 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
     String? selectedCourseCode;
     DateTime? selectedDateTime;
 
-    // Fetch course codes from Firestore
     List<String> courseCodes = [];
-    QuerySnapshot courseSnapshot = await FirebaseFirestore.instance.collection('courses').get();
+    QuerySnapshot courseSnapshot =
+        await FirebaseFirestore.instance.collection('courses').get();
     for (var doc in courseSnapshot.docs) {
       courseCodes.add(doc['courseCode']);
     }
@@ -90,7 +95,8 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
                     initialTime: TimeOfDay.now(),
                   );
                   if (time != null) {
-                    selectedDateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                    selectedDateTime = DateTime(
+                        date.year, date.month, date.day, time.hour, time.minute);
                   }
                 }
               },
@@ -140,29 +146,47 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
               children: [
                 _buildCalendarCard(),
                 _buildProfileCard(),
+                _buildReportCard(), // New Report Card
               ],
             ),
             SizedBox(height: 20),
-            Text("Upcoming Classes", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            Expanded(
-              child: StreamBuilder(
-                stream: _classesCollection.where('dateTime', isGreaterThan: Timestamp.now()).snapshots(),
-                builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return Center(child: Text("No upcoming classes"));
-                  }
-                  return ListView(
-                    children: snapshot.data!.docs.map((doc) {
-                      Timestamp timestamp = doc["dateTime"];
-                      DateTime classDateTime = timestamp.toDate();
-                      return _buildClassItem(doc.get("courseCode"), classDateTime);
-                    }).toList(),
-                  );
-                },
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Upcoming Classes",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 10),
+                    SizedBox(
+                      height: 250,
+                      child: StreamBuilder(
+                        stream: _classesCollection
+                            .where('dateTime', isGreaterThan: Timestamp.now())
+                            .orderBy('dateTime')
+                            .snapshots(),
+                        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return Center(child: CircularProgressIndicator());
+                          }
+                          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                            return Center(child: Text("No upcoming classes"));
+                          }
+                          return ListView(
+                            children: snapshot.data!.docs.map((doc) {
+                              Timestamp timestamp = doc["dateTime"];
+                              DateTime classDateTime = timestamp.toDate();
+                              return _buildClassItem(doc.get("courseCode"), classDateTime);
+                            }).toList(),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -192,7 +216,8 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
               children: [
                 Icon(Icons.calendar_today, size: 40, color: Colors.blue),
                 SizedBox(height: 5),
-                Text("Schedule Class", textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
+                Text("Schedule Class",
+                    textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
               ],
             ),
           ),
@@ -205,17 +230,10 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
     return Expanded(
       child: InkWell(
         onTap: () {
-          // Navigate to the Profile Screen and pass userData
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => LecturerProfileScreen(
-                userData: {
-                  'name': userName ?? 'Name not available',
-                  'email': userEmail ?? 'Email not available',
-                  'profileImage': profileImage ?? '', // Pass the profile image URL or placeholder
-                },
-              ),
+              builder: (context) => LecturerProfileScreen(),
             ),
           );
         },
@@ -228,7 +246,8 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
               children: [
                 Icon(Icons.account_circle, size: 40, color: Colors.blue),
                 SizedBox(height: 5),
-                Text("Profile", textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
+                Text("Profile",
+                    textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
               ],
             ),
           ),
@@ -237,11 +256,43 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
     );
   }
 
+ Widget _buildReportCard() {
+  return Expanded(
+    child: InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>AttendanceReportScreen (), // Navigate to the report screen
+          ),
+        );
+      },
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Icon(Icons.bar_chart, size: 40, color: Colors.green),
+              SizedBox(height: 5),
+              Text("Reports",
+                  textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+
   Widget _buildClassItem(String code, DateTime dateTime) {
+    String formattedDate = DateFormat.yMMMd().add_jm().format(dateTime);
     return Card(
       child: ListTile(
         title: Text(code),
-        subtitle: Text("${dateTime.month}/${dateTime.day} at ${dateTime.hour}:${dateTime.minute}"),
+        subtitle: Text(formattedDate),
       ),
     );
   }

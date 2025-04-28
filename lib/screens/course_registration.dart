@@ -93,7 +93,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
+        elevation: 4,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
@@ -137,20 +137,22 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen> {
 
                 return Card(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(16), // Rounded corners
                   ),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 20), // Larger margin between cards
+                  elevation: 5,
+                  shadowColor: Colors.grey[300],
                   child: Padding(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: const EdgeInsets.all(16.0), // More padding inside the card
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           title,
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: Colors.blueAccent,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -166,7 +168,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen> {
                           description,
                           style: const TextStyle(fontSize: 14),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Align(
                           alignment: Alignment.centerLeft,
                           child: ElevatedButton(
@@ -174,15 +176,19 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen> {
                                 ? null
                                 : () => _registerForCourse(code, title),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isRegistered ? Colors.grey : Colors.white,
-                              foregroundColor: isRegistered ? Colors.black : Colors.blue,
+                              backgroundColor: isRegistered ? Colors.grey : Colors.blueAccent,
+                              foregroundColor: isRegistered ? Colors.black : Colors.white,
                               side: BorderSide(
-                                  color: isRegistered ? Colors.grey : Colors.blue),
+                                  color: isRegistered ? Colors.grey : Colors.blueAccent),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12), // Rounded button
                               ),
+                              padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 24.0),
                             ),
-                            child: Text(isRegistered ? "Registered" : "Register"),
+                            child: Text(
+                              isRegistered ? "Registered" : "Register",
+                              style: TextStyle(fontSize: 16),
+                            ),
                           ),
                         ),
                       ],

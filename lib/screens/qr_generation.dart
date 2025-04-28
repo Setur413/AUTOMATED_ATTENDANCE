@@ -1,7 +1,13 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'bottom.dart'; // Import your BottomNavBar widget
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/rendering.dart';
+import 'bottom.dart';
 
 class QRCodeGenerationScreen extends StatefulWidget {
   const QRCodeGenerationScreen({super.key});
@@ -11,14 +17,14 @@ class QRCodeGenerationScreen extends StatefulWidget {
 }
 
 class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
-  int expiryTime = 10;
+  int expiryTime = 10; // Expiry time in minutes
   TextEditingController sessionTitleController = TextEditingController();
   TextEditingController sessionDescriptionController = TextEditingController();
   TimeOfDay? selectedTime;
   String? qrData;
-  bool isLoading = false; // Track loading state
+  bool isLoading = false;
+  GlobalKey globalKey = GlobalKey();
 
-  // Function to select the time for the session
   void _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -31,20 +37,15 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
     }
   }
 
-  // Function to generate QR code with session details
   void _generateQRCode() async {
     String title = sessionTitleController.text.trim();
     String description = sessionDescriptionController.text.trim();
 
-    // Ensure the current date and selected time are combined into a DateTime
     if (selectedTime != null) {
       final now = DateTime.now();
       final sessionDateTime = DateTime(now.year, now.month, now.day, selectedTime!.hour, selectedTime!.minute);
-
-      // Format the DateTime into a string for display in QR code
       String time = "${sessionDateTime.hour}:${sessionDateTime.minute.toString().padLeft(2, '0')}";
 
-      // Validate input fields
       if (title.isEmpty || description.isEmpty || selectedTime == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Please enter all session details.")),
@@ -57,16 +58,16 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
       });
 
       try {
-        // Store the session with DateTime in Firestore as Timestamp
+        // Store the session details and expiration time in Firestore
         DocumentReference docRef = await FirebaseFirestore.instance.collection('sessions').add({
           'title': title,
           'description': description,
-          'time': sessionDateTime, // Store DateTime here
+          'time': sessionDateTime,
           'expiryTime': expiryTime,
           'createdAt': FieldValue.serverTimestamp(),
+          'expirationTimestamp': Timestamp.fromDate(sessionDateTime.add(Duration(minutes: expiryTime))), // Add expiration timestamp
         });
 
-        // Set the QR code data with formatted time
         setState(() {
           qrData = "Session ID: ${docRef.id}\nTitle: $title\nTime: $time\nExpiry: $expiryTime min";
           isLoading = false;
@@ -82,13 +83,72 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
     }
   }
 
+  Future<Uint8List?> _capturePng() async {
+    try {
+      RenderRepaintBoundary boundary = globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      print(e);
+      return null;
+    }
+  }
+
+  Future<void> _downloadQRCode() async {
+    Uint8List? pngBytes = await _capturePng();
+    if (pngBytes == null) return;
+
+    final directory = await getExternalStorageDirectory();
+    final path = "${directory!.path}/qr_code.png";
+    final file = File(path);
+    await file.writeAsBytes(pngBytes);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("QR Code saved to: $path")),
+    );
+  }
+
+  Future<void> _shareQRCode() async {
+    Uint8List? pngBytes = await _capturePng();
+    if (pngBytes == null) return;
+
+    final tempDir = await getTemporaryDirectory();
+    final file = await File('${tempDir.path}/qr_code.png').create();
+    await file.writeAsBytes(pngBytes);
+
+    await Share.shareXFiles([XFile(file.path)], text: 'Here is the class QR code.');
+  }
+
+  // Check if QR code has expired
+  void _checkQRCodeExpiration(String sessionId) async {
+    DocumentSnapshot sessionDoc = await FirebaseFirestore.instance.collection('sessions').doc(sessionId).get();
+
+    if (sessionDoc.exists) {
+      final expirationTime = sessionDoc['expirationTimestamp'] as Timestamp;
+      final currentTime = Timestamp.now();
+
+      if (currentTime.compareTo(expirationTime) > 0) {
+        // QR code has expired
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("This QR code has expired.")),
+        );
+      } else {
+        // Proceed with attendance
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("QR code is valid!")),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text("QR Code Generation"),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,10 +156,13 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
             Center(
               child: qrData == null
                   ? Image.asset('assets/download.png', height: 150)
-                  : QrImageView(
-                      data: qrData!,
-                      version: QrVersions.auto,
-                      size: 200.0,
+                  : RepaintBoundary(
+                      key: globalKey,
+                      child: QrImageView(
+                        data: qrData!,
+                        version: QrVersions.auto,
+                        size: 200.0,
+                      ),
                     ),
             ),
             SizedBox(height: 20),
@@ -126,7 +189,7 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
                   expiryTime = newValue!;
                 });
               },
-              items: [5, 10, 15, 20, 30].map<DropdownMenuItem<int>>((int value) {
+              items: [5, 10, 15, 20, 30].map((int value) {
                 return DropdownMenuItem<int>(
                   value: value,
                   child: Text("$value min"),
@@ -140,6 +203,35 @@ class _QRCodeGenerationScreenState extends State<QRCodeGenerationScreen> {
                 child: isLoading ? CircularProgressIndicator() : Text("Generate QR Code"),
               ),
             ),
+            if (qrData != null) ...[
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _downloadQRCode,
+                    icon: Icon(Icons.download),
+                    label: Text("Download"),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _shareQRCode,
+                    icon: Icon(Icons.share),
+                    label: Text("Share"),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  if (qrData != null) {
+                    // Check if the QR code has expired
+                    String sessionId = qrData!.split("\n")[0].split(": ")[1];
+                    _checkQRCodeExpiration(sessionId);
+                  }
+                },
+                child: Text("Check QR Code Expiration"),
+              ),
+            ]
           ],
         ),
       ),

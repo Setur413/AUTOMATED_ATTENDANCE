@@ -43,14 +43,14 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.blueAccent,
         elevation: 0,
         title: const Text(
           "Attendance History",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -78,9 +78,6 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                   itemBuilder: (context, index) {
                     final data = records[index].data() as Map<String, dynamic>;
 
-                    // Debugging prints
-                    print('Attendance Record: $data');
-
                     final sessionTitle = data['sessionTitle'] ?? 'No Title';
                     final regNumber = data['registrationNumber'] ?? 'N/A';
                     final scannedAt = data['scannedAt'] as Timestamp?;
@@ -95,13 +92,13 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                         contentPadding: const EdgeInsets.all(12),
                         title: Text(
                           sessionTitle,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Reg. Number: $regNumber"),
-                            Text("Date: ${formatDate(scannedAt)}"),
+                            Text("Reg. Number: $regNumber", style: const TextStyle(fontSize: 14)),
+                            Text("Date: ${formatDate(scannedAt)}", style: const TextStyle(fontSize: 14)),
                           ],
                         ),
                       ),

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_attendance/screens/class_calendar.dart';
 import 'package:qr_attendance/screens/navigation.dart';
-import 'package:qr_attendance/screens/student_profile.dart'; // Import profile screen
+import 'package:qr_attendance/screens/student_profile.dart';
 
 class StudentDashboard extends StatefulWidget {
-  final Map<String, dynamic> userData; // Accepts user data for profile screen
+  final Map<String, dynamic> userData;
 
   const StudentDashboard({super.key, required this.userData});
 
@@ -60,22 +60,21 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    // Retrieve student's full name and registration number
-    String fullName = widget.userData['fullName'] ?? 'Student';
-    String regNumber = widget.userData['registrationNumber'] ?? 'N/A';
-
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text("Dashboard", style: TextStyle(color: Colors.black)),
+        backgroundColor: Colors.blueAccent,
+        elevation: 4,
+        title: Text(
+          "Dashboard",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black),
+            icon: Icon(Icons.notifications, color: Colors.white),
             onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.black, size: 30),
+            icon: Icon(Icons.account_circle, color: Colors.white, size: 30),
             onPressed: () {
               Navigator.push(
                 context,
@@ -85,63 +84,56 @@ class _StudentDashboardState extends State<StudentDashboard> {
               );
             },
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Display welcome message and registration number
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Welcome, $fullName", 
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  "Reg No: $regNumber",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const Center(
+            // App Title
+            Center(
               child: Text(
                 "Attendify",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.blueAccent),
               ),
             ),
-            const Center(
+            Center(
               child: Text(
-                "Your attendance app ",
+                "Your attendance app",
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
             ),
-            const SizedBox(height: 20),
-            const Text(
-              "Upcoming classes",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            SizedBox(height: 30),
+            // Upcoming Classes Section
+            Text(
+              "Upcoming Classes",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator(color: Colors.blueAccent))
                 : _errorMessage.isNotEmpty
-                    ? Center(child: Text(_errorMessage, style: TextStyle(color: Colors.red)))
+                    ? Center(child: Text(_errorMessage, style: TextStyle(color: Colors.red, fontSize: 16)))
                     : ClassCalendar(upcomingClasses: _upcomingClasses),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
+            // Recent Attendance Card
             Card(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15.0),
+                borderRadius: BorderRadius.circular(12.0),
               ),
-              elevation: 4,
-              child: const ListTile(
-                leading: Icon(Icons.history, color: Colors.blue),
-                title: Text("Recent Attendance Records"),
+              elevation: 6,
+              shadowColor: Colors.grey[500],
+              child: ListTile(
+                leading: Icon(Icons.history, color: Colors.blueAccent),
+                title: Text("Recent Attendance Records", style: TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text("Last marked attendance on 12th March 2025"),
-                trailing: Icon(Icons.arrow_forward_ios),
+                trailing: Icon(Icons.arrow_forward_ios, color: Colors.blueAccent),
+                onTap: () {
+                  // Handle tap (navigate to the attendance history screen if needed)
+                },
               ),
             ),
           ],
